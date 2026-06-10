@@ -86,20 +86,43 @@ let originalQuestions = [];
 async function loadTest() {
     try {
         const res = await fetch('test.txt');
+
+        if (!res.ok) throw new Error("Файл не найден");
+
         const text = await res.text();
 
-        allQuestions = parseQuestions(text);
-        originalQuestions = [...allQuestions];
+        initTest(text);
 
-        renderPage(currentPage);
-        renderPagination();
     } catch (e) {
-        document.getElementById('quiz').innerHTML =
-            "<p style='color:red'>Ошибка загрузки test.txt</p>";
+        console.warn("test.txt не найден, используем встроенный тест");
+
+        const fallback = `
+1. Столица Казахстана?
+- Алматы
+- Астана +
+- Шымкент
+- Тараз
+
+2. 2+2=?
+- 3
+- 4 +
+- 5
+- 6
+        `;
+
+        initTest(fallback);
     }
 }
 
-// НОВЫЙ ПАРСЕР
+function initTest(text) {
+    allQuestions = parseQuestions(text);
+    originalQuestions = [...allQuestions];
+
+    renderPage(currentPage);
+    renderPagination();
+}
+
+// ПАРСЕР
 function parseQuestions(text) {
     const lines = text.split('\n')
         .map(l => l.trim())
@@ -110,11 +133,8 @@ function parseQuestions(text) {
 
     lines.forEach(line => {
 
-        // новый вопрос (1. ...)
         if (/^\d+\./.test(line)) {
-            if (currentQuestion) {
-                questions.push(currentQuestion);
-            }
+            if (currentQuestion) questions.push(currentQuestion);
 
             currentQuestion = {
                 question: line.replace(/^\d+\.\s*/, ''),
@@ -122,15 +142,13 @@ function parseQuestions(text) {
             };
         }
 
-        // вариант ответа
         else if (line.startsWith('-') || line.startsWith('–')) {
 
-            // проверка правильного (+ в конце даже с пробелами)
             const isCorrect = /\+\s*$/.test(line);
 
             const clean = line
-                .replace(/^[-–]\s*/, '')   // убрать - или –
-                .replace(/\+\s*$/, '')    // убрать + в конце
+                .replace(/^[-–]\s*/, '')
+                .replace(/\+\s*$/, '')
                 .trim();
 
             if (currentQuestion) {
@@ -142,14 +160,12 @@ function parseQuestions(text) {
         }
     });
 
-    if (currentQuestion) {
-        questions.push(currentQuestion);
-    }
+    if (currentQuestion) questions.push(currentQuestion);
 
     return questions;
 }
 
-// рендер
+// render
 function renderPage(page) {
     const quiz = document.getElementById('quiz');
     quiz.innerHTML = '';
@@ -208,7 +224,7 @@ function checkAnswer(questionDiv, selectedLabel) {
     }
 }
 
-// пагинация
+// pagination
 function renderPagination() {
     const div = document.getElementById('pagination');
     div.innerHTML = '';
@@ -231,9 +247,13 @@ function renderPagination() {
     }
 }
 
-// shuffle
+// правильный shuffle
 function shuffle(arr) {
-    return arr.sort(() => Math.random() - 0.5);
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
 }
 
 // все перемешать
@@ -262,6 +282,11 @@ function applyRange() {
     const start = parseInt(startQ.value) - 1;
     const end = parseInt(endQ.value);
     const count = parseInt(countQ.value);
+
+    if (isNaN(start) || isNaN(end) || isNaN(count)) {
+        alert("Введите числа");
+        return;
+    }
 
     let selected = originalQuestions.slice(start, end);
     selected = shuffle([...selected]).slice(0, count);
