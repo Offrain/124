@@ -78,7 +78,13 @@ body.dark .variant {
 <button onclick="showCorrectAnswers()">Дұрыс жауаптар</button>
 <button onclick="resetAll()">Қайта бастау</button>
 <button onclick="toggleTheme()">🌙 Тема</button>
+    
+<br>
 
+<input type="text" id="searchInput" placeholder="Поиск..." oninput="searchQuestions()" style="width: 300px; padding: 8px;">
+<button onclick="clearSearch()">Очистить</button>
+
+    
 <div id="quiz"></div>
 <div class="pagination" id="pagination"></div>
 
@@ -334,6 +340,47 @@ function toggleTheme() {
         document.body.classList.contains('dark') ? 'dark' : 'light');
 }
 
+
+let filteredQuestions = [];
+
+// поиск
+function searchQuestions() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+
+    if (!query) {
+        allQuestions = [...originalQuestions];
+    } else {
+        filteredQuestions = originalQuestions.filter(q => {
+
+            // поиск в вопросе
+            const inQuestion = q.question.toLowerCase().includes(query);
+
+            // поиск в ответах
+            const inAnswers = q.answers.some(a =>
+                a.text.toLowerCase().includes(query)
+            );
+
+            return inQuestion || inAnswers;
+        });
+
+        allQuestions = filteredQuestions;
+    }
+
+    currentPage = 1;
+    renderPage(currentPage);
+    renderPagination();
+}
+
+// очистка поиска
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    allQuestions = [...originalQuestions];
+
+    currentPage = 1;
+    renderPage(currentPage);
+    renderPagination();
+}
+    
 // init
 window.onload = () => {
     loadTest();
